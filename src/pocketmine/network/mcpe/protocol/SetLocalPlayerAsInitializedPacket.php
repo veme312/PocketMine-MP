@@ -25,49 +25,23 @@ namespace pocketmine\network\mcpe\protocol;
 
 #include <rules/DataPacket.h>
 
-
-use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\NetworkSession;
 
-class MoveEntityAbsolutePacket extends DataPacket{
-	public const NETWORK_ID = ProtocolInfo::MOVE_ENTITY_ABSOLUTE_PACKET;
-
-	public const FLAG_GROUND = 0x01;
-	public const FLAG_TELEPORT = 0x02;
+class SetLocalPlayerAsInitializedPacket extends DataPacket{
+	public const NETWORK_ID = ProtocolInfo::SET_LOCAL_PLAYER_AS_INITIALIZED_PACKET;
 
 	/** @var int */
 	public $entityRuntimeId;
-	/** @var int */
-	public $flags = 0;
-	/** @var Vector3 */
-	public $position;
-	/** @var float */
-	public $xRot;
-	/** @var float */
-	public $yRot;
-	/** @var float */
-	public $zRot;
 
 	protected function decodePayload(){
 		$this->entityRuntimeId = $this->getEntityRuntimeId();
-		$this->flags = $this->getByte();
-		$this->position = $this->getVector3();
-		$this->xRot = $this->getByteRotation();
-		$this->yRot = $this->getByteRotation();
-		$this->zRot = $this->getByteRotation();
 	}
 
 	protected function encodePayload(){
 		$this->putEntityRuntimeId($this->entityRuntimeId);
-		$this->putByte($this->flags);
-		$this->putVector3($this->position);
-		$this->putByteRotation($this->xRot);
-		$this->putByteRotation($this->yRot);
-		$this->putByteRotation($this->zRot);
 	}
 
 	public function handle(NetworkSession $session) : bool{
-		return $session->handleMoveEntityAbsolute($this);
+		return $session->handleSetLocalPlayerAsInitialized($this);
 	}
-
 }

@@ -142,6 +142,7 @@ class PacketPool{
 		static::registerPacket(new LabTablePacket());
 		static::registerPacket(new UpdateBlockSyncedPacket());
 		static::registerPacket(new MoveEntityDeltaPacket());
+		static::registerPacket(new SetLocalPlayerAsInitializedPacket());
 
 		static::registerPacket(new BatchPacket());
 	}

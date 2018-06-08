@@ -67,7 +67,7 @@ class MoveEntityDeltaPacket extends DataPacket{
 	}
 
 	protected function decodePayload(){
-		$this->flags = $this->getLShort();
+		$this->flags = $this->getByte();
 		$this->xDiff = $this->maybeReadCoord(self::FLAG_HAS_X);
 		$this->yDiff = $this->maybeReadCoord(self::FLAG_HAS_Y);
 		$this->zDiff = $this->maybeReadCoord(self::FLAG_HAS_Z);
@@ -89,7 +89,7 @@ class MoveEntityDeltaPacket extends DataPacket{
 	}
 
 	protected function encodePayload(){
-		$this->putLShort($this->flags);
+		$this->putByte($this->flags);
 		$this->maybeWriteCoord(self::FLAG_HAS_X, $this->xDiff);
 		$this->maybeWriteCoord(self::FLAG_HAS_Y, $this->yDiff);
 		$this->maybeWriteCoord(self::FLAG_HAS_Z, $this->zDiff);
