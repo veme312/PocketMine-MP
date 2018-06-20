@@ -21,33 +21,20 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\normal\biome;
+namespace pocketmine\level\biome;
 
-use pocketmine\block\Sapling;
-use pocketmine\level\generator\populator\TallGrass;
-use pocketmine\level\generator\populator\Tree;
+use pocketmine\block\Block;
+use pocketmine\block\BlockFactory;
 
-class TaigaBiome extends SnowyBiome{
+abstract class GrassyBiome extends Biome{
 
 	public function __construct(){
-		parent::__construct();
-
-		$trees = new Tree(Sapling::SPRUCE);
-		$trees->setBaseAmount(10);
-		$this->addPopulator($trees);
-
-		$tallGrass = new TallGrass();
-		$tallGrass->setBaseAmount(1);
-
-		$this->addPopulator($tallGrass);
-
-		$this->setElevation(63, 81);
-
-		$this->temperature = 0.05;
-		$this->rainfall = 0.8;
-	}
-
-	public function getName() : string{
-		return "Taiga";
+		$this->setGroundCover([
+			BlockFactory::get(Block::GRASS),
+			BlockFactory::get(Block::DIRT),
+			BlockFactory::get(Block::DIRT),
+			BlockFactory::get(Block::DIRT),
+			BlockFactory::get(Block::DIRT)
+		]);
 	}
 }

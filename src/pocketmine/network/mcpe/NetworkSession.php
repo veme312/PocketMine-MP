@@ -588,5 +588,4 @@ abstract class NetworkSession{
 	public function handleSetLocalPlayerAsInitialized(SetLocalPlayerAsInitializedPacket $packet) : bool{
 		return false;
 	}
-
 }

@@ -29,7 +29,7 @@ use pocketmine\level\format\io\ChunkUtils;
 use pocketmine\level\format\io\exception\UnsupportedChunkFormatException;
 use pocketmine\level\format\SubChunk;
 use pocketmine\level\generator\Flat;
-use pocketmine\level\generator\Generator;
+use pocketmine\level\generator\GeneratorManager;
 use pocketmine\level\Level;
 use pocketmine\level\LevelException;
 use pocketmine\nbt\LittleEndianNBTStream;
@@ -121,7 +121,7 @@ class LevelDB extends BaseLevelProvider{
 			if($this->levelData->hasTag("Generator", IntTag::class)){
 				switch($this->levelData->getInt("Generator")){ //Detect correct generator from MCPE data
 					case self::GENERATOR_FLAT:
-						$this->levelData->setString("generatorName", (string) Generator::getGenerator("FLAT"));
+						$this->levelData->setString("generatorName", "flat");
 						if(($layers = $db->get(self::ENTRY_FLAT_WORLD_LAYERS)) !== false){ //Detect existing custom flat layers
 							$layers = trim($layers, "[]");
 						}else{
@@ -131,7 +131,7 @@ class LevelDB extends BaseLevelProvider{
 						break;
 					case self::GENERATOR_INFINITE:
 						//TODO: add a null generator which does not generate missing chunks (to allow importing back to MCPE and generating more normal terrain without PocketMine messing things up)
-						$this->levelData->setString("generatorName", (string) Generator::getGenerator("DEFAULT"));
+						$this->levelData->setString("generatorName", "default");
 						$this->levelData->setString("generatorOptions", "");
 						break;
 					case self::GENERATOR_LIMITED:
@@ -140,8 +140,10 @@ class LevelDB extends BaseLevelProvider{
 						throw new LevelException("Unknown LevelDB world format type, this level cannot be loaded");
 				}
 			}else{
-				$this->levelData->setString("generatorName", (string) Generator::getGenerator("DEFAULT"));
+				$this->levelData->setString("generatorName", "default");
 			}
+		}elseif(($generatorName = self::hackyFixForGeneratorClasspathInLevelDat($this->levelData->getString("generatorName"))) !== null){
+			$this->levelData->setString("generatorName", $generatorName);
 		}
 
 		if(!$this->levelData->hasTag("generatorOptions", StringTag::class)){
@@ -212,7 +214,7 @@ class LevelDB extends BaseLevelProvider{
 			//Additional PocketMine-MP fields
 			new CompoundTag("GameRules", []),
 			new ByteTag("hardcore", ($options["hardcore"] ?? false) === true ? 1 : 0),
-			new StringTag("generatorName", Generator::getGeneratorName($generator)),
+			new StringTag("generatorName", GeneratorManager::getGeneratorName($generator)),
 			new StringTag("generatorOptions", $options["preset"] ?? "")
 		]);
 
@@ -397,6 +399,8 @@ class LevelDB extends BaseLevelProvider{
 			}
 		}
 
+		//TODO: extra data should be converted into blockstorage layers (first they need to be implemented!)
+		/*
 		$extraData = [];
 		if(($extraRawData = $this->db->get($index . self::TAG_BLOCK_EXTRA_DATA)) !== false and strlen($extraRawData) > 0){
 			$binaryStream->setBuffer($extraRawData, 0);
@@ -406,7 +410,7 @@ class LevelDB extends BaseLevelProvider{
 				$value = $binaryStream->getLShort();
 				$extraData[$key] = $value;
 			}
-		}
+		}*/
 
 		$chunk = new Chunk(
 			$chunkX,
@@ -415,8 +419,7 @@ class LevelDB extends BaseLevelProvider{
 			$entities,
 			$tiles,
 			$biomeIds,
-			$heightMap,
-			$extraData
+			$heightMap
 		);
 
 		//TODO: tile ticks, biome states (?)
@@ -448,30 +451,13 @@ class LevelDB extends BaseLevelProvider{
 
 		$this->db->put($index . self::TAG_DATA_2D, pack("v*", ...$chunk->getHeightMapArray()) . $chunk->getBiomeIdArray());
 
-		$extraData = $chunk->getBlockExtraDataArray();
-		if(count($extraData) > 0){
-			$stream = new BinaryStream();
-			$stream->putLInt(count($extraData));
-			foreach($extraData as $key => $value){
-				$stream->putLInt($key);
-				$stream->putLShort($value);
-			}
-
-			$this->db->put($index . self::TAG_BLOCK_EXTRA_DATA, $stream->getBuffer());
-		}else{
-			$this->db->delete($index . self::TAG_BLOCK_EXTRA_DATA);
-		}
-
 		//TODO: use this properly
 		$this->db->put($index . self::TAG_STATE_FINALISATION, chr(self::FINALISATION_DONE));
 
 		/** @var CompoundTag[] $tiles */
 		$tiles = [];
 		foreach($chunk->getTiles() as $tile){
-			if(!$tile->isClosed()){
-				$tile->saveNBT();
-				$tiles[] = $tile->namedtag;
-			}
+			$tiles[] = $tile->saveNBT();
 		}
 		$this->writeTags($tiles, $index . self::TAG_BLOCK_ENTITY);
 

@@ -76,6 +76,7 @@ use pocketmine\inventory\transaction\CraftingTransaction;
 use pocketmine\inventory\transaction\InventoryTransaction;
 use pocketmine\inventory\transaction\TransactionValidationException;
 use pocketmine\item\Consumable;
+use pocketmine\item\Durable;
 use pocketmine\item\Item;
 use pocketmine\item\WritableBook;
 use pocketmine\item\WrittenBook;
@@ -86,7 +87,6 @@ use pocketmine\level\format\Chunk;
 use pocketmine\level\Level;
 use pocketmine\level\Location;
 use pocketmine\level\Position;
-use pocketmine\level\WeakPosition;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 use pocketmine\metadata\MetadataValue;
@@ -298,7 +298,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 	/** @var Vector3|null */
 	protected $sleeping = null;
-	/** @var WeakPosition|null */
+	/** @var Position|null */
 	private $spawnPosition = null;
 
 	//TODO: Abilities
@@ -401,7 +401,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 *
 	 * @return UUID|null
 	 */
-	public function getUniqueId(){
+	public function getUniqueId() : ?UUID{
 		return parent::getUniqueId();
 	}
 
@@ -459,7 +459,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	/**
 	 * @param Player $player
 	 */
-	public function spawnTo(Player $player){
+	public function spawnTo(Player $player) : void{
 		if($this->spawned and $player->spawned and $this->isAlive() and $player->isAlive() and $player->getLevel() === $this->level and $player->canSee($this) and !$this->isSpectator()){
 			parent::spawnTo($player);
 		}
@@ -538,7 +538,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return !$this->isSpectator();
 	}
 
-	public function resetFallDistance(){
+	public function resetFallDistance() : void{
 		parent::resetFallDistance();
 		if($this->inAirTicks !== 0){
 			$this->startAirTicks = 5;
@@ -666,8 +666,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	public function sendCommandData(){
-		//TODO: this needs fixing
-
 		$pk = new AvailableCommandsPacket();
 		foreach($this->server->getCommandMap()->getCommands() as $name => $command){
 			if(isset($pk->commandData[$command->getName()]) or $command->getName() === "help"){
@@ -688,7 +686,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 			$aliases = $command->getAliases();
 			if(!empty($aliases)){
-				if(!\in_array($data->commandName, $aliases, true)){
+				if(!in_array($data->commandName, $aliases, true)){
 					//work around a client bug which makes the original name not show when aliases are used
 					$aliases[] = $data->commandName;
 				}
@@ -812,7 +810,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 *
 	 * If null is given, will additionally send the skin to the player itself as well as its viewers.
 	 */
-	public function sendSkin(array $targets = null) : void{
+	public function sendSkin(?array $targets = null) : void{
 		parent::sendSkin($targets ?? $this->server->getOnlinePlayers());
 	}
 
@@ -923,12 +921,15 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	protected function switchLevel(Level $targetLevel) : bool{
 		$oldLevel = $this->level;
 		if(parent::switchLevel($targetLevel)){
-			foreach($this->usedChunks as $index => $d){
-				Level::getXZ($index, $X, $Z);
-				$this->unloadChunk($X, $Z, $oldLevel);
+			if($oldLevel !== null){
+				foreach($this->usedChunks as $index => $d){
+					Level::getXZ($index, $X, $Z);
+					$this->unloadChunk($X, $Z, $oldLevel);
+				}
 			}
 
 			$this->usedChunks = [];
+			$this->loadQueue = [];
 			$this->level->sendTime($this);
 			$this->level->sendDifficulty($this);
 
@@ -1061,9 +1062,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->dataPacket($pk);
 	}
 
-	protected function orderChunks(){
+	protected function orderChunks() : void{
 		if(!$this->isConnected() or $this->viewDistance === -1){
-			return false;
+			return;
 		}
 
 		Timings::$playerChunkOrderTimer->startTiming();
@@ -1148,8 +1149,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->loadQueue = $newOrder;
 
 		Timings::$playerChunkOrderTimer->stopTiming();
-
-		return true;
 	}
 
 	/**
@@ -1169,7 +1168,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 * @return bool
 	 */
 	public function hasValidSpawnPosition() : bool{
-		return $this->spawnPosition instanceof WeakPosition and $this->spawnPosition->isValid();
+		return $this->spawnPosition !== null and $this->spawnPosition->isValid();
 	}
 
 	/**
@@ -1184,7 +1183,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}else{
 			$level = $pos->getLevel();
 		}
-		$this->spawnPosition = new WeakPosition($pos->x, $pos->y, $pos->z, $level);
+		$this->spawnPosition = new Position($pos->x, $pos->y, $pos->z, $level);
 		$pk = new SetSpawnPositionPacket();
 		$pk->x = $this->spawnPosition->getFloorX();
 		$pk->y = $this->spawnPosition->getFloorY();
@@ -1487,7 +1486,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return 0;
 	}
 
-	protected function checkGroundState(float $movX, float $movY, float $movZ, float $dx, float $dy, float $dz){
+	protected function checkGroundState(float $movX, float $movY, float $movZ, float $dx, float $dy, float $dz) : void{
 		if(!$this->onGround or $movY != 0){
 			$bb = clone $this->boundingBox;
 			$bb->minY = $this->y - 0.2;
@@ -1502,8 +1501,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return false; //currently has no server-side movement
 	}
 
-	protected function checkNearEntities(int $tickDiff){
-		foreach($this->level->getNearbyEntities($this->boundingBox->grow(1, 0.5, 1), $this) as $entity){
+	protected function checkNearEntities(){
+		foreach($this->level->getNearbyEntities($this->boundingBox->expandedCopy(1, 0.5, 1), $this) as $entity){
 			$entity->scheduleUpdate();
 
 			if(!$entity->isAlive() or $entity->isFlaggedForDespawn()){
@@ -1637,17 +1636,17 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->newPosition = null;
 	}
 
-	public function jump(){
+	public function jump() : void{
 		$this->server->getPluginManager()->callEvent(new PlayerJumpEvent($this));
 		parent::jump();
 	}
 
-	public function setMotion(Vector3 $mot){
-		if(parent::setMotion($mot)){
+	public function setMotion(Vector3 $motion) : bool{
+		if(parent::setMotion($motion)){
 			$this->broadcastMotion();
 
-			if($this->motionY > 0){
-				$this->startAirTicks = (-log($this->gravity / ($this->gravity + $this->drag * $this->motionY)) / $this->drag) * 2 + 5;
+			if($this->motion->y > 0){
+				$this->startAirTicks = (-log($this->gravity / ($this->gravity + $this->drag * $this->motion->y)) / $this->drag) * 2 + 5;
 			}
 
 			return true;
@@ -1655,11 +1654,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return false;
 	}
 
-	protected function updateMovement(bool $teleport = false){
+	protected function updateMovement(bool $teleport = false) : void{
 
 	}
 
-	protected function tryChangeMovement(){
+	protected function tryChangeMovement() : void{
 
 	}
 
@@ -1702,14 +1701,16 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		if($this->spawned){
 			$this->processMovement($tickDiff);
-			$this->motionX = $this->motionY = $this->motionZ = 0; //TODO: HACK! (Fixes player knockback being messed up)
+			$this->motion->x = $this->motion->y = $this->motion->z = 0; //TODO: HACK! (Fixes player knockback being messed up)
 
 			Timings::$timerEntityBaseTick->startTiming();
 			$this->entityBaseTick($tickDiff);
 			Timings::$timerEntityBaseTick->stopTiming();
 
 			if(!$this->isSpectator() and $this->isAlive()){
-				$this->checkNearEntities($tickDiff);
+				Timings::$playerCheckNearEntitiesTimer->startTiming();
+				$this->checkNearEntities();
+				Timings::$playerCheckNearEntitiesTimer->stopTiming();
 
 				if($this->speed !== null){
 					if($this->onGround){
@@ -1744,7 +1745,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return true;
 	}
 
-	public function doFoodTick(int $tickDiff = 1){
+	protected function doFoodTick(int $tickDiff = 1) : void{
 		if($this->isSurvival()){
 			parent::doFoodTick($tickDiff);
 		}
@@ -1827,11 +1828,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return ($targetDot - $eyeDot) >= -$maxDiff;
 	}
 
-	protected function initHumanData(){
+	protected function initHumanData() : void{
 		$this->setNameTag($this->username);
 	}
 
-	protected function initEntity(){
+	protected function initEntity() : void{
 		parent::initEntity();
 		$this->addDefaultWindows();
 	}
@@ -1914,7 +1915,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 
 		if(!$packet->skipVerification){
-			$this->server->getScheduler()->scheduleAsyncTask(new VerifyLoginTask($this, $packet));
+			$this->server->getAsyncPool()->submitTask(new VerifyLoginTask($this, $packet));
 		}else{
 			$this->onVerifyCompleted($packet, null, true);
 		}
@@ -1946,7 +1947,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$xuid = "";
 		}
 
-		if($xuid === ""){
+		if($xuid === "" or !is_string($xuid)){
 			if($signedByMojang){
 				$this->server->getLogger()->error($this->getName() . " should have an XUID, but none found");
 			}
@@ -1955,7 +1956,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				return;
 			}
 
-			$this->server->getLogger()->debug($this->getName() . " is NOT logged into to Xbox Live");
+			$this->server->getLogger()->debug($this->getName() . " is NOT logged into Xbox Live");
 		}else{
 			$this->server->getLogger()->debug($this->getName() . " is logged into Xbox Live");
 			$this->xuid = $xuid;
@@ -1994,7 +1995,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		if(($level = $this->server->getLevelByName($this->namedtag->getString("Level", "", true))) === null){
 			$this->setLevel($this->server->getDefaultLevel());
 			$this->namedtag->setString("Level", $this->level->getFolderName());
-			$spawnLocation = $this->level->getSpawnLocation();
+			$spawnLocation = $this->level->getSafeSpawn();
 			$this->namedtag->setTag(new ListTag("Pos", [
 				new DoubleTag("", $spawnLocation->x),
 				new DoubleTag("", $spawnLocation->y),
@@ -2084,9 +2085,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		if(!$this->hasValidSpawnPosition()){
 			if(($level = $this->server->getLevelByName($this->namedtag->getString("SpawnLevel", ""))) instanceof Level){
-				$this->spawnPosition = new WeakPosition($this->namedtag->getInt("SpawnX"), $this->namedtag->getInt("SpawnY"), $this->namedtag->getInt("SpawnZ"), $level);
+				$this->spawnPosition = new Position($this->namedtag->getInt("SpawnX"), $this->namedtag->getInt("SpawnY"), $this->namedtag->getInt("SpawnZ"), $level);
 			}else{
-				$this->spawnPosition = WeakPosition::fromObject($this->level->getSafeSpawn());
+				$this->spawnPosition = $this->level->getSafeSpawn();
 			}
 		}
 
@@ -2145,8 +2146,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->sendPotionEffects($this);
 		$this->sendData($this);
 
-		$this->inventory->sendContents($this);
-		$this->armorInventory->sendContents($this);
+		$this->sendAllInventories();
 		$this->inventory->sendCreativeContents();
 		$this->inventory->sendHeldItem($this);
 		$this->dataPacket($this->server->getCraftingManager()->getCraftingDataPacket());
@@ -2285,7 +2285,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				if($action !== null){
 					$actions[] = $action;
 				}
-			}catch(\Throwable $e){
+			}catch(\Exception $e){
 				$this->server->getLogger()->debug("Unhandled inventory action from " . $this->getName() . ": " . $e->getMessage());
 				$this->sendAllInventories();
 				return false;
@@ -2506,20 +2506,20 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 							$ev->setCancelled();
 						}
 
-						if(!$this->isSprinting() and !$this->isFlying() and $this->fallDistance > 0 and !$this->hasEffect(Effect::BLINDNESS) and !$this->isInsideOfWater()){
-							$ev->setDamage($ev->getFinalDamage() / 2, EntityDamageEvent::MODIFIER_CRITICAL);
+						if(!$this->isSprinting() and !$this->isFlying() and $this->fallDistance > 0 and !$this->hasEffect(Effect::BLINDNESS) and !$this->isUnderwater()){
+							$ev->setModifier($ev->getFinalDamage() / 2, EntityDamageEvent::MODIFIER_CRITICAL);
 						}
 
 						$target->attack($ev);
 
 						if($ev->isCancelled()){
-							if($heldItem->isTool() and $this->isSurvival()){
+							if($heldItem instanceof Durable and $this->isSurvival()){
 								$this->inventory->sendContents($this);
 							}
 							return true;
 						}
 
-						if($ev->getDamage(EntityDamageEvent::MODIFIER_CRITICAL) > 0){
+						if($ev->getModifier(EntityDamageEvent::MODIFIER_CRITICAL) > 0){
 							$pk = new AnimatePacket();
 							$pk->action = AnimatePacket::ACTION_CRITICAL_HIT;
 							$pk->entityRuntimeId = $target->getId();
@@ -2529,13 +2529,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 							}
 						}
 
-						if($this->isSurvival()){
-							if($heldItem->useOn($target)){
-								$this->inventory->setItemInHand($heldItem);
-							}
-
-							$this->exhaust(0.3, PlayerExhaustEvent::CAUSE_ATTACK);
+						if($heldItem->onAttackEntity($target) and $this->isSurvival()){ //always fire the hook, even if we are survival
+							$this->inventory->setItemInHand($heldItem);
 						}
+
+						$this->exhaust(0.3, PlayerExhaustEvent::CAUSE_ATTACK);
 
 						return true;
 					default:
@@ -2747,40 +2745,16 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				$this->jump();
 				return true;
 			case PlayerActionPacket::ACTION_START_SPRINT:
-				$ev = new PlayerToggleSprintEvent($this, true);
-				$this->server->getPluginManager()->callEvent($ev);
-				if($ev->isCancelled()){
-					$this->sendData($this);
-				}else{
-					$this->setSprinting(true);
-				}
+				$this->toggleSprint(true);
 				return true;
 			case PlayerActionPacket::ACTION_STOP_SPRINT:
-				$ev = new PlayerToggleSprintEvent($this, false);
-				$this->server->getPluginManager()->callEvent($ev);
-				if($ev->isCancelled()){
-					$this->sendData($this);
-				}else{
-					$this->setSprinting(false);
-				}
+				$this->toggleSprint(false);
 				return true;
 			case PlayerActionPacket::ACTION_START_SNEAK:
-				$ev = new PlayerToggleSneakEvent($this, true);
-				$this->server->getPluginManager()->callEvent($ev);
-				if($ev->isCancelled()){
-					$this->sendData($this);
-				}else{
-					$this->setSneaking(true);
-				}
+				$this->toggleSneak(true);
 				return true;
 			case PlayerActionPacket::ACTION_STOP_SNEAK:
-				$ev = new PlayerToggleSneakEvent($this, false);
-				$this->server->getPluginManager()->callEvent($ev);
-				if($ev->isCancelled()){
-					$this->sendData($this);
-				}else{
-					$this->setSneaking(false);
-				}
+				$this->toggleSneak(false);
 				return true;
 			case PlayerActionPacket::ACTION_START_GLIDE:
 			case PlayerActionPacket::ACTION_STOP_GLIDE:
@@ -2803,6 +2777,26 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->setUsingItem(false);
 
 		return true;
+	}
+
+	public function toggleSprint(bool $sprint) : void{
+		$ev = new PlayerToggleSprintEvent($this, $sprint);
+		$this->server->getPluginManager()->callEvent($ev);
+		if($ev->isCancelled()){
+			$this->sendData($this);
+		}else{
+			$this->setSprinting($sprint);
+		}
+	}
+
+	public function toggleSneak(bool $sneak) : void{
+		$ev = new PlayerToggleSneakEvent($this, $sneak);
+		$this->server->getPluginManager()->callEvent($ev);
+		if($ev->isCancelled()){
+			$this->sendData($this);
+		}else{
+			$this->setSneaking($sneak);
+		}
 	}
 
 	public function handleAnimate(AnimatePacket $packet) : bool{
@@ -3343,7 +3337,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 * @param string               $reason Reason showed in console
 	 * @param bool                 $notify
 	 */
-	final public function close($message = "", string $reason = "generic reason", bool $notify = true){
+	final public function close($message = "", string $reason = "generic reason", bool $notify = true) : void{
 		if($this->isConnected() and !$this->closed){
 
 			try{
@@ -3494,7 +3488,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 	}
 
-	public function kill(){
+	public function kill() : void{
 		if(!$this->spawned){
 			return;
 		}
@@ -3504,7 +3498,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->sendRespawnPacket($this->getSpawn());
 	}
 
-	protected function onDeath(){
+	protected function onDeath() : void{
 		$message = "death.attack.generic";
 
 		$params = [
@@ -3680,8 +3674,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->sendData($this->getViewers());
 
 		$this->sendSettings();
-		$this->inventory->sendContents($this);
-		$this->armorInventory->sendContents($this);
+		$this->sendAllInventories();
 
 		$this->spawnToAll();
 		$this->scheduleUpdate();
@@ -3693,7 +3686,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->exhaust(0.3, PlayerExhaustEvent::CAUSE_DAMAGE);
 	}
 
-	public function attack(EntityDamageEvent $source){
+	public function attack(EntityDamageEvent $source) : void{
 		if(!$this->isAlive()){
 			return;
 		}
@@ -3710,11 +3703,12 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		parent::attack($source);
 	}
 
-	protected function doHitAnimation() : void{
-		parent::doHitAnimation();
-		if($this->spawned){
-			$this->broadcastEntityEvent(EntityEventPacket::HURT_ANIMATION, null, [$this]);
+	public function broadcastEntityEvent(int $eventId, ?int $eventData = null, ?array $players = null) : void{
+		if($this->spawned and $players === null){
+			$players = $this->getViewers();
+			$players[] = $this;
 		}
+		parent::broadcastEntityEvent($eventId, $eventData, $players);
 	}
 
 	public function getOffsetPosition(Vector3 $vector3) : Vector3{
