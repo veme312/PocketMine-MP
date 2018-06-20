@@ -21,20 +21,20 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\normal\biome;
+namespace pocketmine\level\biome;
 
+use pocketmine\block\Block;
+use pocketmine\block\BlockFactory;
 
-class DesertBiome extends SandyBiome{
+abstract class SnowyBiome extends Biome{
 
 	public function __construct(){
-		parent::__construct();
-		$this->setElevation(63, 74);
-
-		$this->temperature = 2;
-		$this->rainfall = 0;
-	}
-
-	public function getName() : string{
-		return "Desert";
+		$this->setGroundCover([
+			BlockFactory::get(Block::SNOW_LAYER),
+			BlockFactory::get(Block::GRASS),
+			BlockFactory::get(Block::DIRT),
+			BlockFactory::get(Block::DIRT),
+			BlockFactory::get(Block::DIRT)
+		]);
 	}
 }

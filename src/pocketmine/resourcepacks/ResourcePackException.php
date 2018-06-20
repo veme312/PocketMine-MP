@@ -21,20 +21,8 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\normal\biome;
+namespace pocketmine\resourcepacks;
 
-use pocketmine\block\Block;
-use pocketmine\block\BlockFactory;
+class ResourcePackException extends \RuntimeException{
 
-abstract class GrassyBiome extends NormalBiome{
-
-	public function __construct(){
-		$this->setGroundCover([
-			BlockFactory::get(Block::GRASS, 0),
-			BlockFactory::get(Block::DIRT, 0),
-			BlockFactory::get(Block::DIRT, 0),
-			BlockFactory::get(Block::DIRT, 0),
-			BlockFactory::get(Block::DIRT, 0),
-		]);
-	}
 }

@@ -42,13 +42,13 @@ class SplashPotion extends Throwable{
 	protected $gravity = 0.05;
 	protected $drag = 0.01;
 
-	protected function initEntity(){
+	protected function initEntity() : void{
 		parent::initEntity();
 
 		$this->setPotionId($this->namedtag->getShort("PotionId", 0));
 	}
 
-	public function saveNBT(){
+	public function saveNBT() : void{
 		parent::saveNBT();
 		$this->namedtag->setShort("PotionId", $this->getPotionId());
 	}
@@ -81,7 +81,7 @@ class SplashPotion extends Throwable{
 
 		if($hasEffects){
 			if(!$this->willLinger()){
-				foreach($this->level->getNearbyEntities($this->boundingBox->grow(4.125, 2.125, 4.125), $this) as $entity){
+				foreach($this->level->getNearbyEntities($this->boundingBox->expandedCopy(4.125, 2.125, 4.125), $this) as $entity){
 					if($entity instanceof Living){
 						$distanceSquared = $entity->distanceSquared($this);
 						if($distanceSquared > 16){ //4 blocks

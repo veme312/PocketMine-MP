@@ -69,5 +69,4 @@ class MoveEntityAbsolutePacket extends DataPacket{
 	public function handle(NetworkSession $session) : bool{
 		return $session->handleMoveEntityAbsolute($this);
 	}
-
 }

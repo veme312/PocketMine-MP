@@ -603,5 +603,4 @@ abstract class NetworkSession{
 	public function handleNetworkStackLatency(NetworkStackLatencyPacket $packet) : bool{
 		return false;
 	}
-
 }

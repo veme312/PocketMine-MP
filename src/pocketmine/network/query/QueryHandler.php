@@ -40,7 +40,7 @@ class QueryHandler{
 	public function __construct(){
 		$this->server = Server::getInstance();
 		$this->server->getLogger()->info($this->server->getLanguage()->translateString("pocketmine.server.query.start"));
-		$addr = ($ip = $this->server->getIp()) != "" ? $ip : "0.0.0.0";
+		$addr = $this->server->getIp();
 		$port = $this->server->getPort();
 		$this->server->getLogger()->info($this->server->getLanguage()->translateString("pocketmine.server.query.info", [$port]));
 		/*
@@ -70,7 +70,7 @@ class QueryHandler{
 		$this->token = random_bytes(16);
 	}
 
-	public static function getTokenString($token, $salt){
+	public static function getTokenString(string $token, string $salt) : int{
 		return Binary::readInt(substr(hash("sha512", $salt . ":" . $token, true), 7, 4));
 	}
 
@@ -110,5 +110,4 @@ class QueryHandler{
 				break;
 		}
 	}
-
 }

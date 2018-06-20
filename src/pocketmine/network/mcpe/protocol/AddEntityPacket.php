@@ -120,5 +120,4 @@ class AddEntityPacket extends DataPacket{
 	public function handle(NetworkSession $session) : bool{
 		return $session->handleAddEntity($this);
 	}
-
 }

@@ -67,6 +67,8 @@ abstract class Terminal{
 				));
 				fclose($stdout);
 			}
+
+			self::init();
 		}
 
 		return self::$formattingCodes;
@@ -251,5 +253,4 @@ abstract class Terminal{
 
 		return $newString;
 	}
-
 }

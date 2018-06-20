@@ -21,45 +21,35 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\normal\biome;
+namespace pocketmine\level\biome;
 
-use pocketmine\block\Sapling;
+use pocketmine\block\Block;
+use pocketmine\block\BlockFactory;
 use pocketmine\level\generator\populator\TallGrass;
-use pocketmine\level\generator\populator\Tree;
 
-class ForestBiome extends GrassyBiome{
+class OceanBiome extends Biome{
 
-	public const TYPE_NORMAL = 0;
-	public const TYPE_BIRCH = 1;
-
-	public $type;
-
-	public function __construct(int $type = self::TYPE_NORMAL){
-		parent::__construct();
-
-		$this->type = $type;
-
-		$trees = new Tree($type === self::TYPE_BIRCH ? Sapling::BIRCH : Sapling::OAK);
-		$trees->setBaseAmount(5);
-		$this->addPopulator($trees);
+	public function __construct(){
+		$this->setGroundCover([
+			BlockFactory::get(Block::GRAVEL),
+			BlockFactory::get(Block::GRAVEL),
+			BlockFactory::get(Block::GRAVEL),
+			BlockFactory::get(Block::GRAVEL),
+			BlockFactory::get(Block::GRAVEL)
+		]);
 
 		$tallGrass = new TallGrass();
-		$tallGrass->setBaseAmount(3);
+		$tallGrass->setBaseAmount(5);
 
 		$this->addPopulator($tallGrass);
 
-		$this->setElevation(63, 81);
+		$this->setElevation(46, 58);
 
-		if($type === self::TYPE_BIRCH){
-			$this->temperature = 0.6;
-			$this->rainfall = 0.5;
-		}else{
-			$this->temperature = 0.7;
-			$this->rainfall = 0.8;
-		}
+		$this->temperature = 0.5;
+		$this->rainfall = 0.5;
 	}
 
 	public function getName() : string{
-		return $this->type === self::TYPE_BIRCH ? "Birch Forest" : "Forest";
+		return "Ocean";
 	}
 }

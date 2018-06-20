@@ -21,20 +21,11 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\normal\biome;
+namespace pocketmine\block;
 
-use pocketmine\block\Block;
-use pocketmine\block\BlockFactory;
+class OutOfBoundsBlock extends Block{
 
-abstract class SnowyBiome extends NormalBiome{
-
-	public function __construct(){
-		$this->setGroundCover([
-			BlockFactory::get(Block::SNOW_LAYER, 0),
-			BlockFactory::get(Block::GRASS, 0),
-			BlockFactory::get(Block::DIRT, 0),
-			BlockFactory::get(Block::DIRT, 0),
-			BlockFactory::get(Block::DIRT, 0)
-		]);
+	public function getName() : string{
+		return "Out of Bounds Block";
 	}
 }

@@ -21,27 +21,18 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\generator\normal\biome;
+namespace pocketmine\item;
 
-use pocketmine\level\generator\populator\TallGrass;
-
-class RiverBiome extends GrassyBiome{
-
-	public function __construct(){
-		parent::__construct();
-
-		$tallGrass = new TallGrass();
-		$tallGrass->setBaseAmount(5);
-
-		$this->addPopulator($tallGrass);
-
-		$this->setElevation(58, 62);
-
-		$this->temperature = 0.5;
-		$this->rainfall = 0.7;
+class DriedKelp extends Food{
+	public function __construct(int $meta = 0){
+		parent::__construct(self::DRIED_KELP, $meta, "Dried Kelp");
 	}
 
-	public function getName() : string{
-		return "River";
+	public function getFoodRestore() : int{
+		return 1;
+	}
+
+	public function getSaturationRestore() : float{
+		return 0.6;
 	}
 }
