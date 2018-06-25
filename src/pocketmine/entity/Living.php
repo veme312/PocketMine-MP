@@ -469,6 +469,7 @@ abstract class Living extends Entity implements Damageable{
 	/**
 	 * Called after EntityDamageEvent execution to apply post-hurt effects, such as reducing absorption or modifying
 	 * armour durability.
+	 * This will not be called by damage sources causing death.
 	 *
 	 * @param EntityDamageEvent $source
 	 */
@@ -534,6 +535,8 @@ abstract class Living extends Entity implements Damageable{
 			return;
 		}
 
+		$this->attackTime = 10; //0.5 seconds cooldown
+
 		if($source instanceof EntityDamageByEntityEvent){
 			$e = $source->getDamager();
 			if($source instanceof EntityDamageByChildEntityEvent){
@@ -551,15 +554,12 @@ abstract class Living extends Entity implements Damageable{
 			}
 		}
 
-		$this->applyPostDamageEffects($source);
-
 		if($this->isAlive()){
+			$this->applyPostDamageEffects($source);
 			$this->doHitAnimation();
 		}else{
 			$this->startDeathAnimation();
 		}
-
-		$this->attackTime = 10; //0.5 seconds cooldown
 	}
 
 	protected function doHitAnimation() : void{
@@ -577,14 +577,17 @@ abstract class Living extends Entity implements Damageable{
 			$motion = clone $this->motion;
 
 			$motion->x /= 2;
-			$motion->y /= 2;
 			$motion->z /= 2;
 			$motion->x += $x * $f * $base;
-			$motion->y += $base;
 			$motion->z += $z * $f * $base;
 
-			if($motion->y > $base){
-				$motion->y = $base;
+			if($this->onGround){
+				$motion->y /= 2;
+				$motion->y += $base;
+
+				if($motion->y > 0.4){ //this is hardcoded in vanilla
+					$motion->y = 0.4;
+				}
 			}
 
 			$this->setMotion($motion);
