@@ -80,9 +80,9 @@ namespace pocketmine {
 	use raklib\RakLib;
 
 	const NAME = "PocketMine-MP";
-	const VERSION = "1.7dev";
+	const VERSION = "1.7.0";
 	const API_VERSION = "3.0.0-ALPHA12";
-	const CODENAME = "[REDACTED]";
+	const CODENAME = "Final";
 
 	const MIN_PHP_VERSION = "7.2.0";
 
